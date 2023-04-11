@@ -4,6 +4,11 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from flask import Flask, request, abort
+import logging
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -11,6 +16,7 @@ line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -23,8 +29,10 @@ def callback():
 
     return "OK"
 
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    logging.info(f"Received message: {event.message.text}")
     text = event.message.text
     song_and_artist = text.split()
 
@@ -40,9 +48,12 @@ def handle_message(event):
             temperature=0.8,
         )
         recommendations = response.choices[0].text.strip()
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=recommendations))
+        line_bot_api.reply_message(
+            event.reply_token, TextSendMessage(text=recommendations))
     else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="曲名とアーティスト名をスペースで区切って入力してください。"))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(
+            text="曲名とアーティスト名をスペースで区切って入力してください。"))
+
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=3000)
